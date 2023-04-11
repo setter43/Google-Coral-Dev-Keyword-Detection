@@ -1,4 +1,5 @@
 # python keyword_detection.py --model soundclassifier_with_metadata.tflite --labels label.txt --duration 1
+# Logitech USB Headset: Audio (hw:2,0)
 
 
 import numpy as np
@@ -29,11 +30,14 @@ def record_audio_callback(indata, frames, time, status):
 def continuous_listen(window_size, model_path, labels_path):
     global audio_buffer
     audio_buffer = np.array([])
-    
 
-    # Load the TFLite model
-    
-    interpreter = tflite.Interpreter(model_path)
+    # Load the TensorFlow Lite model with the TPU
+    interpreter = tflite.Interpreter(
+        model_path=model_path,
+        experimental_delegates=[
+            tflite.load_delegate('libedgetpu.so.1')
+        ]
+    )
     interpreter.allocate_tensors()
     input_shape = interpreter.get_input_details()[0]['shape']
 
@@ -60,7 +64,7 @@ def continuous_listen(window_size, model_path, labels_path):
 
                 # Resample the recorded audio to match the model's input size
                 input_length = input_shape[1]
-                
+
                 resampled_audio = resampy.resample(window, 16000, input_length)
                 # Ensure the audio data is in the correct shape and data type
                 input_data = np.array(resampled_audio, dtype=np.float32).reshape(input_shape)
@@ -69,6 +73,16 @@ def continuous_listen(window_size, model_path, labels_path):
                 detected_keyword = np.argmax(output_data)
                 if output_data[0, detected_keyword] > 0.5:  # Adjust the threshold as needed
                     print('Detected keyword:', labels[detected_keyword])
+
+                #0 Background Noise
+                # 1 Fire Mission
+                # 2 Hello
+                # 3 Over
+                # 4 Zero
+                
+                if(labels[detected_keyword] == labels[2]):
+                    print("Hello label " + labels[2])
+
 
 
 
